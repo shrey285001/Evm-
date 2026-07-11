@@ -1,0 +1,109 @@
+{
+  "config": {
+    "schoolName": "Shri Vinayak Academy Internation School, Orai",
+    "adminPassword": "admin123",
+    "positions": [
+      {
+        "id": "pos1",
+        "title": "Head Boy",
+        "round": 1,
+        "active": true,
+        "candidates": [
+          {
+            "id": "cand1-1",
+            "name": "Aarav Mehta",
+            "symbol": "🦁",
+            "house": ""
+          },
+          {
+            "id": "cand1-2",
+            "name": "Kabir Sharma",
+            "symbol": "🦅",
+            "house": ""
+          },
+          {
+            "id": "new-cand-1783799551313",
+            "name": "shrey ",
+            "symbol": "🗳️",
+            "house": ""
+          }
+        ]
+      },
+      {
+        "id": "pos2",
+        "title": "Head Girl",
+        "round": 1,
+        "active": true,
+        "candidates": [
+          {
+            "id": "cand2-1",
+            "name": "Ananya Rao",
+            "symbol": "🌸",
+            "house": ""
+          },
+          {
+            "id": "cand2-2",
+            "name": "Ishita Verma",
+            "symbol": "⭐",
+            "house": ""
+          },
+          {
+            "id": "new-cand-1783799565713",
+            "name": "test user",
+            "symbol": "🗳️",
+            "house": ""
+          }
+        ]
+      },
+      {
+        "id": "pos3",
+        "title": "House Captain — Red House",
+        "round": 1,
+        "active": true,
+        "candidates": [
+          {
+            "id": "cand3-1",
+            "name": "Rohan Das",
+            "symbol": "🔥",
+            "house": "Red House"
+          },
+          {
+            "id": "cand3-2",
+            "name": "Vivaan Kapoor",
+            "symbol": "🛡️",
+            "house": "Red House"
+          },
+          {
+            "id": "new-cand-1783799570676",
+            "name": "test user",
+            "symbol": "🗳️",
+            "house": ""
+          }
+        ]
+      }
+    ]
+  },
+  "votes": [
+    {
+      "id": "vote:pos1:r1:1783799528491-05llahi",
+      "positionId": "pos1",
+      "round": 1,
+      "candidateId": "cand1-1",
+      "ts": "2026-07-11T19:52:08.491Z"
+    },
+    {
+      "id": "vote:pos1:r1:1783799613370-1fyzmub",
+      "positionId": "pos1",
+      "round": 1,
+      "candidateId": "new-cand-1783799551313",
+      "ts": "2026-07-11T19:53:33.370Z"
+    },
+    {
+      "id": "vote:pos2:r1:1783799622060-imhez68",
+      "positionId": "pos2",
+      "round": 1,
+      "candidateId": "cand2-1",
+      "ts": "2026-07-11T19:53:42.060Z"
+    }
+  ]
+}
