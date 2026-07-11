@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School EVM Voting System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand" id="brandHome">
+    <img src="images/logo.png" alt="Logo" class="seal">
+    <div class="school-name">
+      <b id="topbarSchoolName">School Election Commission</b>
+      <span>Electronic Voting Machine System</span>
+    </div>
+  </div>
+  <nav>
+    <button id="navHome" class="active">All Positions</button>
+    <button id="navAdmin">Admin</button>
+  </nav>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ HOME HUB ============ -->
+  <div id="homeStage">
+    <div class="panel">
+      <div class="eyebrow">Polling Stations</div>
+      <h2>Choose a Position to Vote</h2>
+      <p class="subtext">Each position runs on its own independent ballot. Open the position your polling station is assigned to — voters, timers and results for each one are kept completely separate.</p>
+      <div class="pos-grid" id="posGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============ VOTE STAGE (single position) ============ -->
+  <div id="voteStage" class="hidden">
+    <span class="back-link" id="backToHome">← All Positions</span>
+    <div class="kiosk">
+      <div class="kiosk-header">
+        <span class="tag mono" id="kioskTag">BALLOT UNIT</span>
+      </div>
+      <div class="screen-box" id="voterScreen"></div>
+    </div>
+    <p class="footer-note">Each ballot locks for 15 seconds after a vote, so only one voter can use the machine at a time.</p>
+  </div>
+
+  <!-- ============ ADMIN LOGIN ============ -->
+  <div id="adminLogin" class="hidden">
+    <div class="panel login-box">
+      <div class="display">Admin Access</div>
+      <p class="subtext">Enter the election administrator password to continue.</p>
+      <div class="field"><input type="password" id="adminPassInput" placeholder="Password"></div>
+      <button class="btn gold" style="width:100%" id="adminLoginBtn">Unlock Admin Panel</button>
+      <p class="footer-note" id="adminLoginMsg"></p>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN STAGE ============ -->
+  <div id="adminStage" class="hidden">
+    <div class="admin-tabs">
+      <button data-tab="results" class="active">Live Results</button>
+      <button data-tab="setup">Election Setup</button>
+      <button data-tab="danger">Export</button>
+    </div>
+
+    <div id="tab-results">
+      <div class="stat-strip" id="statStrip"></div>
+      <div class="panel">
+        <div class="eyebrow">Live</div>
+        <h2>Position-wise Results</h2>
+        <p class="subtext">Tallies are computed from individual vote records, so results stay accurate even with many devices voting at once.</p>
+        <button class="btn small ghost" id="refreshResultsBtn">Refresh Results</button>
+        <span class="footer-note" id="lastRefreshed" style="margin-left:10px;"></span>
+        <div id="resultsContainer" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <div id="tab-setup" class="hidden">
+      <div class="panel">
+        <div class="eyebrow">Configuration</div>
+        <h2>School & Branding</h2>
+        <div class="row">
+          <div class="field"><label>School Name</label><input type="text" id="cfgSchoolName" class="mono"></div>
+          <div class="field"><label>Admin Password</label><input type="text" id="cfgAdminPass" class="mono"></div>
+        </div>
+        <button class="btn gold" id="saveBrandingBtn">Save</button>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow">Positions</div>
+        <h2>Positions & Candidates</h2>
+        <p class="subtext">Add up to 8 positions. Each becomes its own dedicated voting page. Use <b>Close Voting</b> to end a round, and <b>Reopen — New Round</b> to run that same position's election again (e.g. a re-poll or tie-break) without touching any other position.</p>
+        <div id="positionsEditor"></div>
+        <button class="btn ghost" id="addPositionBtn">+ Add Position</button>
+      </div>
+    </div>
+
+    <div id="tab-danger" class="hidden">
+      <div class="panel">
+        <div class="eyebrow">Export</div>
+        <h2>Download Results</h2>
+        <p class="subtext">Export the current round's tally for every position as a CSV file.</p>
+        <button class="btn ghost" id="exportBtn">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
