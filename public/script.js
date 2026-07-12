@@ -1,5 +1,37 @@
 const API_URL = 'http://localhost:3000/api';
 
+// Dynamic quotes for voting theme
+const VOTING_QUOTES = [
+  "Every vote counts. Make your voice heard.",
+  "Democracy begins with you. Vote with confidence.",
+  "Your vote is your power. Exercise it wisely.",
+  "One person, one vote. Together, we decide our future.",
+  "Voting is your right. Use it to shape our school.",
+  "In unity, we find strength. Vote for positive change.",
+  "Your choice matters. Cast your vote today.",
+  "Democracy is not a spectator sport. Vote now.",
+  "Every voice deserves to be heard. Vote for change.",
+  "Together, we make decisions that impact us all."
+];
+
+let currentQuoteIndex = 0;
+
+function rotateQuote(){
+  const quoteEl = document.getElementById('quoteText');
+  if(quoteEl){
+    quoteEl.style.opacity = '0';
+    quoteEl.style.transition = 'opacity 0.4s ease-out';
+    setTimeout(() => {
+      currentQuoteIndex = (currentQuoteIndex + 1) % VOTING_QUOTES.length;
+      quoteEl.textContent = VOTING_QUOTES[currentQuoteIndex];
+      quoteEl.style.opacity = '1';
+    }, 200);
+  }
+}
+
+// Rotate quotes every 8 seconds
+setInterval(rotateQuote, 8000);
+
 async function loadConfig(){
   try {
     const response = await fetch(`${API_URL}/config`);
@@ -138,7 +170,7 @@ function renderBallot(){
   voteCtx.selectedCandidate = null;
   let rows = pos.candidates.map(c => `
     <div class="candidate-row" data-cid="${c.id}">
-      <div class="candidate-symbol">${c.symbol || '🗳️'}</div>
+      <div class="candidate-avatar">${c.avatar ? `<img src="${c.avatar}" alt="${c.name}">` : (c.symbol || '🗳️')}</div>
       <div class="candidate-info"><div class="cname">${c.name}</div>${c.house ? `<div class="chouse">${c.house}</div>` : ''}</div>
       <div class="evm-button"><div class="led"></div></div>
     </div>`).join('');
@@ -168,7 +200,7 @@ function showConfirm(){
     <div class="confirm-box">
       <div class="display">CONFIRM YOUR VOTE</div>
       <p class="subtext">${pos.title}</p>
-      <div class="csymbol">${cand.symbol || '🗳️'}</div>
+      <div class="csymbol">${cand.avatar ? `<img src="${cand.avatar}" alt="${cand.name}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:4px solid var(--gold);">` : (cand.symbol || '🗳️')}</div>
       <div class="cname" style="font-size:19px;font-weight:700;">${cand.name}</div>
       <div class="confirm-actions">
         <button class="btn ghost" id="cancelBtn">Change</button>
