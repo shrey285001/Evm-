@@ -1,21 +1,13 @@
+
 const express = require('express');
-const low = require('lowdb');
-const FileSync = require('lowdb/adapters/FileSync');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+require('dotenv').config();
+const { createClient } = require('@supabase/supabase-js');
 
-const adapter = new FileSync('db.json');
-const db = low(adapter);
-
-// Set some defaults if the DB is empty
-db.defaults({
-  config: {
-    schoolName : "Greenwood Public School",
-    adminPassword : "admin123",
-    positions : []
-  },
-  votes: []
-}).write();
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SECRET_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
 app.use(cors());
@@ -24,46 +16,120 @@ app.use(express.static('public'));
 
 const port = 3000;
 
-function uid() {
-  return Math.random().toString(36).slice(2, 9);
-}
+console.log('Initializing server with Supabase...');
+console.log('SUPABASE_URL:', supabaseUrl ? 'configured' : 'MISSING');
+console.log('SUPABASE_SECRET_KEY:', supabaseKey ? 'configured' : 'MISSING');
 
 // API routes
 
 // Get config
-app.get('/api/config', (req, res) => {
-  const config = db.get('config').value();
-  res.json(config);
+app.get('/api/config', async (req, res) => {
+  console.log('Fetching config from Supabase...');
+  const { data, error } = await supabase
+    .from('config')
+    .select('*')
+    .limit(1);
+
+  if (error) {
+    console.error('Error fetching config from Supabase:', error);
+    return res.status(500).json({ error: 'Failed to fetch config', details: error.message });
+  }
+
+  if (!data || data.length === 0) {
+    console.log('No config data found in Supabase');
+    return res.json({});
+  }
+
+  // Normalize field names from database to match frontend expectations
+  const config = data[0];
+  const normalizedConfig = {
+    id: config.id,
+    schoolName: config.schoolname || config.schoolName || '',
+    adminPassword: config.adminpassword || config.adminPassword || '',
+    positions: config.positions || []
+  };
+
+  console.log('Config fetched successfully:', normalizedConfig);
+  res.json(normalizedConfig);
 });
 
 // Update config
-app.post('/api/config', (req, res) => {
+app.post('/api/config', async (req, res) => {
   const newConfig = req.body;
-  db.set('config', newConfig).write();
+  console.log('Updating config:', newConfig);
+  
+  // Map camelCase to snake_case for database
+  const dbUpdate = {
+    schoolname: newConfig.schoolName,
+    adminpassword: newConfig.adminPassword,
+    positions: newConfig.positions
+  };
+  
+  // Assuming the config table has a single row with id 1
+  const { data, error } = await supabase
+    .from('config')
+    .update(dbUpdate)
+    .eq('id', 1);
+
+  if (error) {
+    console.error('Error updating config:', error);
+    return res.status(500).json({ error: 'Failed to update config', details: error.message });
+  }
+
+  console.log('Config updated successfully');
   res.json({ success: true });
 });
 
 // Cast a vote
-app.post('/api/vote', (req, res) => {
+app.post('/api/vote', async (req, res) => {
   const { positionId, round, candidateId } = req.body;
   if (!positionId || !round || !candidateId) {
     return res.status(400).json({ error: 'Missing vote data' });
   }
   const vote = {
-    id: `vote:${positionId}:r${round}:${Date.now()}-${uid()}`,
     positionId,
     round,
     candidateId,
-    ts: new Date().toISOString()
   };
-  db.get('votes').push(vote).write();
+
+  console.log('Casting vote:', vote);
+  const { data, error } = await supabase
+    .from('votes')
+    .insert([vote]);
+
+  if (error) {
+    console.error('Error casting vote:', error);
+    return res.status(500).json({ error: 'Failed to cast vote', details: error.message });
+  }
+
+  console.log('Vote recorded successfully');
   res.json({ success: true });
 });
 
 // Tally results for all positions
-app.get('/api/results', (req, res) => {
-  const config = db.get('config').value();
-  const votes = db.get('votes').value();
+app.get('/api/results', async (req, res) => {
+  console.log('Fetching results...');
+  const { data: configData, error: configError } = await supabase
+    .from('config')
+    .select('*')
+    .limit(1);
+    
+  if (configError) {
+    console.error('Error fetching config for results:', configError);
+    return res.status(500).json({ error: 'Failed to fetch config for results', details: configError.message });
+  }
+
+  const config = configData[0];
+  console.log('Config loaded for results');
+
+  const { data: votes, error: votesError } = await supabase
+    .from('votes')
+    .select('*');
+
+  if (votesError) {
+    console.error('Error fetching votes for results:', votesError);
+    return res.status(500).json({ error: 'Failed to fetch votes for results', details: votesError.message });
+  }
   
   let totalVoters = 0;
   let totalVotesCast = 0;
@@ -94,7 +160,6 @@ app.get('/api/results', (req, res) => {
     perPosition
   });
 });
-
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
