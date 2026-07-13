@@ -11,6 +11,13 @@ function jsonResponse(data: any, status = 200) {
   });
 }
 
+type Env = {
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  ASSETS: any;
+};
+
 async function supabaseFetch(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string; SUPABASE_SERVICE_ROLE_KEY?: string }, path: string, init: RequestInit = {}) {
   const url = `${env.SUPABASE_URL}/rest/v1${path}`;
   const key = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
@@ -36,10 +43,30 @@ async function supabaseFetch(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: str
   return body;
 }
 
-async function handleConfig(request: Request, env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string }) {
+async function getOrCreateConfig(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string; SUPABASE_SERVICE_ROLE_KEY?: string }) {
+  const data = await supabaseFetch(env, "/config?select=*&limit=1");
+  const config = Array.isArray(data) && data.length > 0 ? data[0] : null;
+  if (config) {
+    return config;
+  }
+
+  const defaultConfig = {
+    id: 1,
+    schoolname: "",
+    adminpassword: "",
+    positions: [],
+  };
+  await supabaseFetch(env, "/config?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([defaultConfig]),
+  });
+  return defaultConfig;
+}
+
+async function handleConfig(request: Request, env: Env) {
   if (request.method === "GET") {
-    const data = await supabaseFetch(env, "/config?select=*&limit=1");
-    const config = Array.isArray(data) && data.length > 0 ? data[0] : {};
+    const config = await getOrCreateConfig(env);
     return jsonResponse({
       id: config.id,
       schoolName: config.schoolname || config.schoolName || "",
@@ -67,7 +94,7 @@ async function handleConfig(request: Request, env: { SUPABASE_URL: string; SUPAB
   return new Response(null, { status: 405, headers: corsHeaders });
 }
 
-async function handleVote(request: Request, env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string }) {
+async function handleVote(request: Request, env: Env) {
   if (request.method !== "POST") {
     return new Response(null, { status: 405, headers: corsHeaders });
   }
@@ -80,13 +107,12 @@ async function handleVote(request: Request, env: { SUPABASE_URL: string; SUPABAS
   return jsonResponse({ success: true });
 }
 
-async function handleResults(request: Request, env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string }) {
+async function handleResults(request: Request, env: Env) {
   if (request.method !== "GET") {
     return new Response(null, { status: 405, headers: corsHeaders });
   }
 
-  const configData = await supabaseFetch(env, "/config?select=*&limit=1");
-  const config = Array.isArray(configData) && configData.length > 0 ? configData[0] : { positions: [] };
+  const config = await getOrCreateConfig(env);
   const votes = await supabaseFetch(env, "/votes?select=*");
 
   let totalVoters = 0;
@@ -118,7 +144,7 @@ async function handleResults(request: Request, env: { SUPABASE_URL: string; SUPA
 }
 
 export default {
-  async fetch(request: Request, env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string; ASSETS: any }) {
+  async fetch(request: Request, env: Env) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
