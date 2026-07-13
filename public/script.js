@@ -1,4 +1,10 @@
-const API_URL = 'http://localhost:3000/api';
+// Dynamically construct API URL based on current location
+// Works with localhost, cloud domains, and any deployment URL
+const API_URL = (() => {
+  const protocol = window.location.protocol; // http: or https:
+  const host = window.location.host; // includes hostname and port
+  return `${protocol}//${host}/api`;
+})();
 
 // Dynamic quotes for voting theme
 const VOTING_QUOTES = [
@@ -155,6 +161,9 @@ function startVotePage(posId){
 
 function screenReady(){
   const pos = getPosition(voteCtx.posId);
+  // ensure any previous ballot key handlers are removed
+  detachBallotKeyHandlers();
+
   voterScreen.innerHTML = `
     <div class="id-entry">
       <div class="display">READY TO VOTE</div>
@@ -168,8 +177,9 @@ function screenReady(){
 function renderBallot(){
   const pos = getPosition(voteCtx.posId);
   voteCtx.selectedCandidate = null;
-  let rows = pos.candidates.map(c => `
-    <div class="candidate-row" data-cid="${c.id}">
+  let rows = pos.candidates.map((c, idx) => `
+    <div class="candidate-row" data-cid="${c.id}" data-idx="${idx}">
+      <div class="num-badge">${idx+1}</div>
       <div class="candidate-avatar">${c.avatar ? `<img src="${c.avatar}" alt="${c.name}">` : (c.symbol || '🗳️')}</div>
       <div class="candidate-info"><div class="cname">${c.name}</div>${c.house ? `<div class="chouse">${c.house}</div>` : ''}</div>
       <div class="evm-button"><div class="led"></div></div>
@@ -180,6 +190,7 @@ function renderBallot(){
       <h3 class="ballot-title">Cast Your Vote</h3>
       <div class="cand-container">${rows}</div>
       <div class="ballot-actions"><button class="btn" id="castBtn" disabled>Cast Vote</button></div>
+      <div class="hint mono" style="margin-top:8px;font-size:13px;color:var(--ink-soft)">Press numbers <b>1-${pos.candidates.length}</b> to select, <b>Enter</b> to confirm, <b>Esc</b> to cancel.</div>
     </div>`;
   document.querySelectorAll('.candidate-row').forEach(row => {
     row.onclick = () => {
@@ -191,6 +202,38 @@ function renderBallot(){
     };
   });
   document.getElementById('castBtn').onclick = showConfirm;
+
+  // attach keyboard handlers for quick selection
+  attachBallotKeyHandlers();
+}
+
+// Keyboard handlers for ballot selection
+function attachBallotKeyHandlers(){
+  detachBallotKeyHandlers();
+  window._ballotKeyHandler = function(e){
+    try{
+      const pos = getPosition(voteCtx.posId);
+      if(!pos) return;
+      const max = pos.candidates.length;
+      if(e.key >= '1' && e.key <= String(max)){
+        const idx = Number(e.key) - 1;
+        const row = document.querySelector(`.candidate-row[data-idx="${idx}"]`);
+        if(row) row.click();
+      } else if(e.key === 'Enter'){
+        const castBtn = document.getElementById('castBtn');
+        if(castBtn && !castBtn.disabled){ castBtn.click(); }
+        else if(voteCtx.selectedCandidate){ showConfirm(); }
+      } else if(e.key === 'Escape'){
+        // cancel back to ready screen
+        screenReady();
+      }
+    }catch(err){ console.error('Ballot key handler error', err); }
+  };
+  window.addEventListener('keydown', window._ballotKeyHandler);
+}
+
+function detachBallotKeyHandlers(){
+  if(window._ballotKeyHandler){ window.removeEventListener('keydown', window._ballotKeyHandler); window._ballotKeyHandler = null; }
 }
 
 function showConfirm(){

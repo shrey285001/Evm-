@@ -14,11 +14,12 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 console.log('Initializing server with Supabase...');
 console.log('SUPABASE_URL:', supabaseUrl ? 'configured' : 'MISSING');
 console.log('SUPABASE_SECRET_KEY:', supabaseKey ? 'configured' : 'MISSING');
+console.log(`Server will run on port: ${port}`);
 
 // API routes
 
