@@ -2,15 +2,15 @@ name = "evm-voting"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
-# Trigger deployment on route
+# Development environment (local testing)
+[env.development]
+vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co" }
+
+# Production environment (Cloudflare Workers)
+[env.production]
+vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co" }
 routes = [
   { pattern = "evm.shrey-cse-lnct.workers.dev/*", zone_name = "workers.dev" }
 ]
 
-# Environment variables - set these in Cloudflare dashboard
-[env.production]
-vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co" }
 
-[[env.production.kv_namespaces]]
-binding = "CACHE"
-id = "your-kv-namespace-id"
