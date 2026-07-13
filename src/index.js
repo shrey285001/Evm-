@@ -5,10 +5,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase credentials from environment (set in wrangler.toml or Cloudflare dashboard)
-const SUPABASE_URL = 'https://lijygukwbzxrkcpjxitp.supabase.co';
-const SUPABASE_SECRET = 'sb_secret_Toyp3qr_Eo41dh0LZYERYw_M_2G55zM'; // In production, use env var
-
 let supabase;
 
 // Helper function to send JSON responses
@@ -199,9 +195,14 @@ const serveStatic = async (path) => {
 // Router
 export default {
   async fetch(request, env, ctx) {
-    // Initialize Supabase on first request
+    // Initialize Supabase on first request using Worker environment bindings
     if (!supabase) {
-      supabase = createClient(SUPABASE_URL, SUPABASE_SECRET);
+      const url = (env && env.SUPABASE_URL) || '';
+      const key = (env && (env.SUPABASE_SECRET || env.SUPABASE_SECRET_KEY)) || '';
+      if (!url || !key) {
+        return jsonResponse({ error: 'Supabase credentials not configured in Worker environment' }, 500);
+      }
+      supabase = createClient(url, key);
     }
 
     const url = new URL(request.url);
