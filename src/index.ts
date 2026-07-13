@@ -5,16 +5,15 @@ const corsHeaders = {
 };
 
 export default {
-  async fetch(request: Request, env: { BACKEND_URL?: string; ASSETS: any }) {
+  async fetch(request: Request, env: { ASSETS: any }) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
     const url = new URL(request.url);
-    const backendUrl = env.BACKEND_URL || "http://127.0.0.1:3000";
 
     if (url.pathname.startsWith("/api/")) {
-      const apiUrl = `${backendUrl}${url.pathname}${url.search}`;
+      const apiUrl = `${url.protocol}//${url.host}${url.pathname}${url.search}`;
       const backendRequest = new Request(apiUrl, {
         method: request.method,
         headers: request.headers,
