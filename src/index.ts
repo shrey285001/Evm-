@@ -17,6 +17,7 @@ async function supabaseFetch(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: str
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
+    ...(init.body ? { "Content-Type": "application/json" } : {}),
     ...init.headers,
   };
 
@@ -50,14 +51,15 @@ async function handleConfig(request: Request, env: { SUPABASE_URL: string; SUPAB
   if (request.method === "POST") {
     const newConfig = await request.json();
     const dbUpdate = {
+      id: 1,
       schoolname: newConfig.schoolName,
       adminpassword: newConfig.adminPassword,
       positions: newConfig.positions,
     };
-    await supabaseFetch(env, "/config?id=eq.1", {
-      method: "PATCH",
+    await supabaseFetch(env, "/config?on_conflict=id", {
+      method: "POST",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify(dbUpdate),
+      body: JSON.stringify([dbUpdate]),
     });
     return jsonResponse({ success: true });
   }
