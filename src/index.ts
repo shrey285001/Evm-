@@ -91,7 +91,7 @@ async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
   };
   await supabaseFetch(env, "/config?on_conflict=id", {
     method: "POST",
-    headers: { Prefer: "return=minimal" },
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify([configUpdate]),
   }, true);
 
@@ -108,7 +108,7 @@ async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
   }));
   await supabaseFetch(env, "/positions?on_conflict=id", {
     method: "POST",
-    headers: { Prefer: "return=minimal" },
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify(positionRows),
   }, true);
 
@@ -125,7 +125,7 @@ async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
   if (candidateRows.length > 0) {
     await supabaseFetch(env, "/candidates?on_conflict=id", {
       method: "POST",
-      headers: { Prefer: "return=minimal" },
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify(candidateRows),
     }, true);
   }
