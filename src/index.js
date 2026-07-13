@@ -229,36 +229,7 @@ export default {
       return getResults(request);
     }
 
-    // Serve static files or root
-    if (path === '/' || path === '') {
-      return new Response(
-        `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EVM Voting System API</title>
-</head>
-<body>
-  <h1>EVM Voting System API</h1>
-  <p>Cloudflare Workers Deployment</p>
-  <p><strong>Status:</strong> ✅ Running</p>
-  <p><strong>Available Endpoints:</strong></p>
-  <ul>
-    <li>GET /api/config - Get election config</li>
-    <li>POST /api/config - Update election config</li>
-    <li>POST /api/vote - Cast a vote</li>
-    <li>GET /api/results - Get election results</li>
-  </ul>
-</body>
-</html>`,
-        {
-          headers: { 'Content-Type': 'text/html' },
-          status: 200
-        }
-      );
-    }
-
-    return jsonResponse({ error: 'Route not found', path }, 404);
+    // All other requests return 404 (frontend should be served separately)
+    return jsonResponse({ error: 'Not Found - Use /api/* endpoints' }, 404);
   }
 };
