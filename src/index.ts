@@ -15,12 +15,24 @@ type Env = {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
+  SUPABASE_SECRET_KEY?: string;
   ASSETS: any;
 };
 
-async function supabaseFetch(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string; SUPABASE_SERVICE_ROLE_KEY?: string }, path: string, init: RequestInit = {}) {
+function getSupabaseKey(env: { SUPABASE_ANON_KEY: string; SUPABASE_SERVICE_ROLE_KEY?: string; SUPABASE_SECRET_KEY?: string }, requireWrite = false) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY || env.SUPABASE_ANON_KEY;
+  if (!key) {
+    throw new Error('Supabase key is not configured in worker environment. Set SUPABASE_ANON_KEY and/or SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY.');
+  }
+  if (requireWrite && !(env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY)) {
+    throw new Error('Supabase write key is required for this operation. Set SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY in worker environment.');
+  }
+  return key;
+}
+
+async function supabaseFetch(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string; SUPABASE_SERVICE_ROLE_KEY?: string; SUPABASE_SECRET_KEY?: string }, path: string, init: RequestInit = {}, requireWrite = false) {
   const url = `${env.SUPABASE_URL}/rest/v1${path}`;
-  const key = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
+  const key = getSupabaseKey(env, requireWrite);
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
@@ -81,7 +93,7 @@ async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
     method: "POST",
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify([configUpdate]),
-  });
+  }, true);
 
   const positions = Array.isArray(newConfig.positions) ? newConfig.positions : [];
   if (positions.length === 0) {
@@ -98,7 +110,7 @@ async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
     method: "POST",
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify(positionRows),
-  });
+  }, true);
 
   const candidateRows = positions.flatMap((pos: any) => {
     return (Array.isArray(pos.candidates) ? pos.candidates : []).map((cand: any) => ({
@@ -115,7 +127,7 @@ async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
       method: "POST",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify(candidateRows),
-    });
+    }, true);
   }
 }
 
@@ -136,7 +148,7 @@ async function getOrCreateConfig(env: Env) {
     method: "POST",
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify([defaultConfig]),
-  });
+  }, true);
   return defaultConfig;
 }
 
@@ -170,7 +182,7 @@ async function handleVote(request: Request, env: Env) {
   await supabaseFetch(env, "/votes", {
     method: "POST",
     body: JSON.stringify([vote]),
-  });
+  }, true);
   return jsonResponse({ success: true });
 }
 
