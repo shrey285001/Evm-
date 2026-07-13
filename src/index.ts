@@ -43,7 +43,83 @@ async function supabaseFetch(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: str
   return body;
 }
 
-async function getOrCreateConfig(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY: string; SUPABASE_SERVICE_ROLE_KEY?: string }) {
+function quoteSupabaseString(value: string) {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+async function getPositionsWithCandidates(env: Env) {
+  try {
+    const positions = await supabaseFetch(env, "/positions?select=id,title,round,active&order=round.asc,id.asc");
+    const candidates = await supabaseFetch(env, "/candidates?select=id,position_id,name,house,symbol,avatar&order=position_id.asc,id.asc");
+    const positionsArray = Array.isArray(positions) ? positions : [];
+    const candidatesArray = Array.isArray(candidates) ? candidates : [];
+    return positionsArray.map((pos: any) => ({
+      ...pos,
+      candidates: candidatesArray
+        .filter((c: any) => c.position_id === pos.id)
+        .map((c: any) => ({
+          id: c.id,
+          name: c.name || "",
+          house: c.house || "",
+          symbol: c.symbol || "",
+          avatar: c.avatar || "",
+        })),
+    }));
+  } catch (err) {
+    const config = await getOrCreateConfig(env);
+    return config.positions || [];
+  }
+}
+
+async function upsertConfigAndDynamicData(env: Env, newConfig: any) {
+  const configUpdate = {
+    id: 1,
+    schoolname: newConfig.schoolName,
+    adminpassword: newConfig.adminPassword,
+  };
+  await supabaseFetch(env, "/config?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([configUpdate]),
+  });
+
+  const positions = Array.isArray(newConfig.positions) ? newConfig.positions : [];
+  if (positions.length === 0) {
+    return;
+  }
+
+  const positionRows = positions.map((pos: any) => ({
+    id: pos.id,
+    title: pos.title,
+    round: pos.round,
+    active: pos.active,
+  }));
+  await supabaseFetch(env, "/positions?on_conflict=id", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(positionRows),
+  });
+
+  const candidateRows = positions.flatMap((pos: any) => {
+    return (Array.isArray(pos.candidates) ? pos.candidates : []).map((cand: any) => ({
+      id: cand.id,
+      position_id: pos.id,
+      name: cand.name,
+      house: cand.house || "",
+      symbol: cand.symbol || "",
+      avatar: cand.avatar || "",
+    }));
+  });
+  if (candidateRows.length > 0) {
+    await supabaseFetch(env, "/candidates?on_conflict=id", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(candidateRows),
+    });
+  }
+}
+
+async function getOrCreateConfig(env: Env) {
   const data = await supabaseFetch(env, "/config?select=*&limit=1");
   const config = Array.isArray(data) && data.length > 0 ? data[0] : null;
   if (config) {
@@ -67,27 +143,18 @@ async function getOrCreateConfig(env: { SUPABASE_URL: string; SUPABASE_ANON_KEY:
 async function handleConfig(request: Request, env: Env) {
   if (request.method === "GET") {
     const config = await getOrCreateConfig(env);
+    const positions = await getPositionsWithCandidates(env);
     return jsonResponse({
       id: config.id,
       schoolName: config.schoolname || config.schoolName || "",
       adminPassword: config.adminpassword || config.adminPassword || "",
-      positions: config.positions || [],
+      positions,
     });
   }
 
   if (request.method === "POST") {
     const newConfig = await request.json();
-    const dbUpdate = {
-      id: 1,
-      schoolname: newConfig.schoolName,
-      adminpassword: newConfig.adminPassword,
-      positions: newConfig.positions,
-    };
-    await supabaseFetch(env, "/config?on_conflict=id", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify([dbUpdate]),
-    });
+    await upsertConfigAndDynamicData(env, newConfig);
     return jsonResponse({ success: true });
   }
 
@@ -113,12 +180,13 @@ async function handleResults(request: Request, env: Env) {
   }
 
   const config = await getOrCreateConfig(env);
+  const positions = await getPositionsWithCandidates(env);
   const votes = await supabaseFetch(env, "/votes?select=*");
 
   let totalVoters = 0;
   let totalVotesCast = 0;
 
-  const perPosition = (config.positions || []).map((pos: any) => {
+  const perPosition = (positions || []).map((pos: any) => {
     const counts: Record<string, number> = {};
     (pos.candidates || []).forEach((c: any) => { counts[c.id] = 0; });
 
