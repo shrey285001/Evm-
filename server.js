@@ -21,6 +21,87 @@ console.log('SUPABASE_URL:', supabaseUrl ? 'configured' : 'MISSING');
 console.log('SUPABASE_SECRET_KEY:', supabaseKey ? 'configured' : 'MISSING');
 console.log(`Server will run on port: ${port}`);
 
+async function getPositionsWithCandidates() {
+  const { data: positions, error: posError } = await supabase
+    .from('positions')
+    .select('*')
+    .order('round', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (posError) {
+    console.error('Error fetching positions from Supabase:', posError);
+    return null;
+  }
+
+  const { data: candidates, error: candError } = await supabase
+    .from('candidates')
+    .select('*')
+    .order('position_id', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (candError) {
+    console.error('Error fetching candidates from Supabase:', candError);
+    return null;
+  }
+
+  return positions.map(pos => ({
+    ...pos,
+    candidates: (candidates || [])
+      .filter(c => c.position_id === pos.id)
+      .map(c => ({
+        id: c.id,
+        name: c.name || '',
+        house: c.house || '',
+        symbol: c.symbol || '',
+        avatar: c.avatar || '',
+      })),
+  }));
+}
+
+async function upsertPositionsAndCandidates(positions) {
+  if (!Array.isArray(positions) || positions.length === 0) {
+    return;
+  }
+
+  const positionRows = positions.map(pos => ({
+    id: pos.id,
+    title: pos.title,
+    round: pos.round,
+    active: pos.active,
+  }));
+
+  const { error: posError } = await supabase
+    .from('positions')
+    .upsert(positionRows, { onConflict: 'id' });
+
+  if (posError) {
+    console.error('Error upserting positions:', posError);
+    throw posError;
+  }
+
+  const candidateRows = positions.flatMap(pos => {
+    return (Array.isArray(pos.candidates) ? pos.candidates : []).map(c => ({
+      id: c.id,
+      position_id: pos.id,
+      name: c.name,
+      house: c.house || '',
+      symbol: c.symbol || '',
+      avatar: c.avatar || '',
+    }));
+  });
+
+  if (candidateRows.length > 0) {
+    const { error: candError } = await supabase
+      .from('candidates')
+      .upsert(candidateRows, { onConflict: 'id' });
+
+    if (candError) {
+      console.error('Error upserting candidates:', candError);
+      throw candError;
+    }
+  }
+}
+
 // API routes
 
 // Get config
@@ -41,7 +122,6 @@ app.get('/api/config', async (req, res) => {
     return res.json({});
   }
 
-  // Normalize field names from database to match frontend expectations
   const config = data[0];
   const normalizedConfig = {
     id: config.id,
@@ -49,6 +129,11 @@ app.get('/api/config', async (req, res) => {
     adminPassword: config.adminpassword || config.adminPassword || '',
     positions: config.positions || []
   };
+
+  const positionsFromTables = await getPositionsWithCandidates();
+  if (Array.isArray(positionsFromTables) && positionsFromTables.length > 0) {
+    normalizedConfig.positions = positionsFromTables;
+  }
 
   console.log('Config fetched successfully:', normalizedConfig);
   res.json(normalizedConfig);
@@ -59,22 +144,26 @@ app.post('/api/config', async (req, res) => {
   const newConfig = req.body;
   console.log('Updating config:', newConfig);
   
-  // Map camelCase to snake_case for database
   const dbUpdate = {
+    id: 1,
     schoolname: newConfig.schoolName,
     adminpassword: newConfig.adminPassword,
     positions: newConfig.positions
   };
   
-  // Assuming the config table has a single row with id 1
   const { data, error } = await supabase
     .from('config')
-    .update(dbUpdate)
-    .eq('id', 1);
+    .upsert([dbUpdate], { onConflict: 'id' });
 
   if (error) {
     console.error('Error updating config:', error);
     return res.status(500).json({ error: 'Failed to update config', details: error.message });
+  }
+
+  try {
+    await upsertPositionsAndCandidates(newConfig.positions);
+  } catch (upsertError) {
+    return res.status(500).json({ error: 'Failed to save positions/candidates', details: upsertError.message });
   }
 
   console.log('Config updated successfully');
@@ -123,9 +212,12 @@ app.get('/api/results', async (req, res) => {
   const config = configData[0];
   console.log('Config loaded for results');
 
+  const positions = await getPositionsWithCandidates();
   const { data: votes, error: votesError } = await supabase
     .from('votes')
     .select('*');
+
+  const resultsPositions = Array.isArray(positions) && positions.length > 0 ? positions : config.positions || [];
 
   if (votesError) {
     console.error('Error fetching votes for results:', votesError);
@@ -135,7 +227,7 @@ app.get('/api/results', async (req, res) => {
   let totalVoters = 0;
   let totalVotesCast = 0;
 
-  const perPosition = config.positions.map(pos => {
+  const perPosition = resultsPositions.map(pos => {
     const counts = {};
     pos.candidates.forEach(c => counts[c.id] = 0);
     

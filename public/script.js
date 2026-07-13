@@ -56,14 +56,20 @@ async function loadConfig(){
 
 async function saveConfig(){
   try {
-    await fetch(`${API_URL}/config`, {
+    const response = await fetch(`${API_URL}/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(CONFIG)
     });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Save failed (${response.status}): ${errorBody}`);
+    }
+    return true;
   } catch(e) {
     console.error('Failed to save config', e);
     alert('Could not save election data to server.');
+    return false;
   }
 }
 function applyBranding(){
@@ -389,18 +395,29 @@ function renderSetupTab(){
   });
 }
 
-document.getElementById('addPositionBtn').onclick = () => {
+document.getElementById('addPositionBtn').onclick = async () => {
   if(CONFIG.positions.length >= 12){ alert('Maximum of 12 simultaneous positions supported.'); return; }
   CONFIG.positions.push({ id: 'new-pos-' + Date.now(), title: 'New Position', round: 1, active: true, candidates: [
     { id: 'new-cand-' + Date.now() + '-1', name: '', symbol: '🗳️', house: '' }, { id: 'new-cand-' + Date.now() + '-2', name: '', symbol: '🗳️', house: '' }
   ]});
-  saveConfig(); renderSetupTab();
+  await saveConfig(); renderSetupTab();
+};
+
+document.getElementById('savePositionsBtn').onclick = async () => {
+  const saved = await saveConfig();
+  if (saved) {
+    alert('Positions saved to the database.');
+  }
 };
 
 document.getElementById('saveBrandingBtn').onclick = async () => {
   CONFIG.schoolName = document.getElementById('cfgSchoolName').value.trim() || CONFIG.schoolName;
   CONFIG.adminPassword = document.getElementById('cfgAdminPass').value.trim() || CONFIG.adminPassword;
-  await saveConfig(); applyBranding(); alert('Saved.');
+  const saved = await saveConfig();
+  if (saved) {
+    applyBranding();
+    alert('Saved.');
+  }
 };
 
 /* ---------- RESULTS TAB ---------- */
