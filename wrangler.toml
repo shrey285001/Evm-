@@ -4,11 +4,11 @@ compatibility_date = "2024-01-01"
 
 # Development environment (local testing)
 [env.development]
-vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co" }
+vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co", FRONTEND_URL = "http://localhost:3000", FRONTEND_API_URL = "http://localhost:3000/api" }
 
 # Production environment (Cloudflare Workers)
 [env.production]
-vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co" }
+vars = { SUPABASE_URL = "https://lijygukwbzxrkcpjxitp.supabase.co", FRONTEND_URL = "https://evm.shrey-cse-lnct.workers.dev", FRONTEND_API_URL = "https://evm.shrey-cse-lnct.workers.dev/api" }
 routes = [
   { pattern = "evm.shrey-cse-lnct.workers.dev/*", zone_name = "workers.dev" }
 ]

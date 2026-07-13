@@ -229,7 +229,12 @@ export default {
       return getResults(request);
     }
 
-    // All other requests return 404 (frontend should be served separately)
+    // If a frontend URL is configured in environment, redirect root requests there
+    if ((path === '/' || path === '') && env && env.FRONTEND_URL) {
+      return Response.redirect(env.FRONTEND_URL, 302);
+    }
+
+    // If a frontend API base is provided, let client be served elsewhere; otherwise 404
     return jsonResponse({ error: 'Not Found - Use /api/* endpoints' }, 404);
   }
 };

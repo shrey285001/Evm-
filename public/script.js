@@ -1,6 +1,10 @@
-// Dynamically construct API URL based on current location
-// Works with localhost, cloud domains, and any deployment URL
+// Determine API base: meta tag overrides, otherwise derive from current host
 const API_URL = (() => {
+  const meta = document.querySelector('meta[name="api-base"]');
+  if (meta && meta.content && meta.content !== '%API_BASE%') {
+    // allow meta to specify full base like https://domain.example/api
+    return meta.content.replace(/\/$/, '');
+  }
   const protocol = window.location.protocol; // http: or https:
   const host = window.location.host; // includes hostname and port
   return `${protocol}//${host}/api`;

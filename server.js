@@ -12,6 +12,26 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// Serve index.html with injected API base so frontend can use environment override
+app.get('/', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  fs.readFile(indexPath, 'utf8', (err, html) => {
+    if (err) {
+      console.error('Error reading index.html', err);
+      return res.status(500).send('Server error');
+    }
+    // FRONTEND_API_URL can be set to point to deployed API (including /api)
+    const apiBase = process.env.FRONTEND_API_URL || `${req.protocol}://${req.get('host')}/api`;
+    const out = html.replace(/%API_BASE%/g, apiBase);
+    res.set('Content-Type', 'text/html');
+    res.send(out);
+  });
+});
+
+// Static assets (css, js, images)
 app.use(express.static('public'));
 
 const port = process.env.PORT || 3000;
