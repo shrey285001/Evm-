@@ -289,10 +289,10 @@ async function castVote(){
 }
 
 function startLock(){
-  let secs = 15;
+  let secs = 5;
   voterScreen.innerHTML = `
     <div class="lock-box">
-      <div class="ring" id="ringEl" style="--pct:100"><div class="num" id="ringNum">15</div></div>
+      <div class="ring" id="ringEl" style="--pct:100"><div class="num" id="ringNum">5</div></div>
       <div class="display">BALLOT LOCKED</div>
       <p class="subtext">Machine unlocking for the next voter in a moment…</p>
     </div>`;
